@@ -1,0 +1,38 @@
+name: Interactive Web CI
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**','package.json','vercel.json','.github/workflows/frontend-ci.yml']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install root workspace
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Deterministic engine tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Boot and HTTP smoke
+        run: |
+          npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/regops-web.log 2>&1 &
+          PID=$!
+          trap 'kill $PID' EXIT
+          node <<'JS'
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          for(let i=0;i<60;i++){try{let r=await fetch('http://127.0.0.1:3000/api/health');if(r.ok)break}catch{}await sleep(250)}
+          let r=await fetch('http://127.0.0.1:3000/');let t=await r.text();if(!r.ok||!t.includes('From vulnerability'))throw Error('homepage smoke');
+          r=await fetch('http://127.0.0.1:3000/api/evaluation');let j=await r.json();if(j.cases!==30||j.passed!==30)throw Error('evaluation');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'Gateway',purpose:'Synthetic portfolio incident with enough context.',actively_exploited_vulnerability:true})});j=await r.json();if(j.screening.decision!=='HUMAN_REVIEW_REQUIRED')throw Error('candidate path');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:'{bad'});if(r.status!==400)throw Error('malformed JSON');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'x',purpose:'A sufficiently long synthetic incident purpose.',admin_override:true})});if(r.status!==422)throw Error('unknown field');
+          console.log('web smoke passed');
+          JS
