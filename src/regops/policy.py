@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import timedelta
+import calendar
+from datetime import datetime, timedelta
 from .models import IncidentInput, ScreeningResult, Deadline
 
 EVIDENCE = {
@@ -13,25 +14,32 @@ EVIDENCE = {
     'legal_review_complete': 'Qualified legal/compliance review',
 }
 
+def _add_calendar_month(value: datetime) -> datetime:
+    year = value.year + (1 if value.month == 12 else 0)
+    month = 1 if value.month == 12 else value.month + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
 def _deadlines(x: IncidentInput, cra: str, nis2: str) -> list[Deadline]:
-    if not x.awareness_at:
-        return []
     out: list[Deadline] = []
     if cra == 'reporting-candidate':
-        out += [
-            Deadline(label='CRA early warning', due_at=x.awareness_at + timedelta(hours=24), hours_from_awareness=24, legal_basis='CRA Article 14 reporting workflow'),
-            Deadline(label='CRA notification', due_at=x.awareness_at + timedelta(hours=72), hours_from_awareness=72, legal_basis='CRA Article 14 reporting workflow'),
-        ]
+        if x.awareness_at:
+            out += [
+                Deadline(label='CRA early warning', due_at=x.awareness_at + timedelta(hours=24), hours_from_awareness=24, legal_basis='CRA Article 14 reporting workflow'),
+                Deadline(label='CRA notification', due_at=x.awareness_at + timedelta(hours=72), hours_from_awareness=72, legal_basis='CRA Article 14 reporting workflow'),
+            ]
         if x.actively_exploited_vulnerability and x.corrective_measure_available_at:
-            out.append(Deadline(label='CRA final vulnerability report', due_at=x.corrective_measure_available_at + timedelta(days=14), legal_basis='CRA final-report workflow'))
-        elif x.severe_security_incident:
-            out.append(Deadline(label='CRA final incident report', due_at=x.awareness_at + timedelta(hours=72, days=30), legal_basis='CRA final-report workflow'))
+            out.append(Deadline(label='CRA final vulnerability report', due_at=x.corrective_measure_available_at + timedelta(days=14), legal_basis='CRA final-report workflow after corrective/mitigating measure availability'))
+        elif x.severe_security_incident and x.cra_notification_submitted_at:
+            out.append(Deadline(label='CRA final incident report', due_at=_add_calendar_month(x.cra_notification_submitted_at), legal_basis='CRA final-report workflow after submitted 72h notification'))
     if nis2 == 'reporting-candidate':
-        out += [
-            Deadline(label='NIS2 Germany early warning', due_at=x.awareness_at + timedelta(hours=24), hours_from_awareness=24, legal_basis='BSIG §32(1) no. 1'),
-            Deadline(label='NIS2 Germany incident notification', due_at=x.awareness_at + timedelta(hours=72), hours_from_awareness=72, legal_basis='BSIG §32(1) no. 2'),
-            Deadline(label='NIS2 Germany final report', due_at=x.awareness_at + timedelta(hours=72, days=30), legal_basis='BSIG §32(1) no. 4'),
-        ]
+        if x.awareness_at:
+            out += [
+                Deadline(label='NIS2 Germany early warning', due_at=x.awareness_at + timedelta(hours=24), hours_from_awareness=24, legal_basis='BSIG §32(1) no. 1'),
+                Deadline(label='NIS2 Germany incident notification', due_at=x.awareness_at + timedelta(hours=72), hours_from_awareness=72, legal_basis='BSIG §32(1) no. 2'),
+            ]
+        if x.nis2_notification_submitted_at:
+            out.append(Deadline(label='NIS2 Germany final report', due_at=_add_calendar_month(x.nis2_notification_submitted_at), legal_basis='BSIG §32(1) no. 4 after submitted incident notification'))
     return out
 
 def screen(x: IncidentInput) -> ScreeningResult:
