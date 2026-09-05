@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import cases from '../lib/evaluation_cases.json' with {type:'json'};import {screen} from '../lib/engine.ts';import {validatePayload} from '../lib/validation.ts';
+test('30 labeled scenarios pass',()=>{assert.equal(cases.length,30);for(const c of cases){const r=screen(c.input as any);assert.equal(r.cra_status,c.expected.cra_status,c.id);assert.equal(r.nis2_status,c.expected.nis2_status,c.id);assert.equal(r.decision,c.expected.decision,c.id)}});
+test('active exploit routes human review',()=>{const r=screen({product_name:'x',purpose:'A sufficiently descriptive synthetic incident purpose.',actively_exploited_vulnerability:true});assert.equal(r.decision,'HUMAN_REVIEW_REQUIRED')});
+test('high cvss alone is not a reporting trigger',()=>{const r=screen({product_name:'x',purpose:'A sufficiently descriptive synthetic incident purpose.',cvss_score:10});assert.equal(r.cra_status,'no-trigger-detected')});
+test('24h and 72h deadlines',()=>{const t='2026-09-05T12:00:00.000Z';const r=screen({product_name:'x',purpose:'A sufficiently descriptive synthetic incident purpose.',actively_exploited_vulnerability:true,awareness_at:t});assert.equal(new Date(r.deadlines[0].due_at).getTime()-new Date(t).getTime(),24*3600000);assert.equal(new Date(r.deadlines[1].due_at).getTime()-new Date(t).getTime(),72*3600000)});
+test('unknown fields rejected',()=>{assert.throws(()=>validatePayload({product_name:'x',purpose:'A sufficiently long synthetic purpose.',admin_override:true}))});
+test('boolean confusion rejected',()=>{assert.throws(()=>validatePayload({product_name:'x',purpose:'A sufficiently long synthetic purpose.',actively_exploited_vulnerability:'false'}))});
+test('primitive payload rejected',()=>{assert.throws(()=>validatePayload('hello'))});
+
+import snapshot from '../lib/python_policy_snapshot.json' with {type:'json'};
+test('TypeScript policy matches Python snapshot on all 30 cases',()=>{for(const c of cases){const r=screen(c.input as any);const p=(snapshot as any)[c.id];assert.deepEqual({cra_status:r.cra_status,nis2_status:r.nis2_status,decision:r.decision,risk_score:r.risk_score,required_evidence:r.required_evidence,missing_evidence:r.missing_evidence,approval_route:r.approval_route},p,c.id)}});

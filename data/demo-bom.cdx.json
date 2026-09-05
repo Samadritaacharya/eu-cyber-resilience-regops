@@ -1,0 +1,94 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "SmartFleet API Gateway",
+      "version": "4.8.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "openssl",
+      "version": "3.0.12",
+      "purl": "pkg:generic/openssl@3.0.12"
+    },
+    {
+      "type": "library",
+      "name": "fastapi",
+      "version": "0.116.1",
+      "purl": "pkg:pypi/fastapi@0.116.1"
+    },
+    {
+      "type": "library",
+      "name": "next",
+      "version": "16.3.4",
+      "purl": "pkg:npm/next@16.3.4"
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "19.2.8",
+      "purl": "pkg:npm/react@19.2.8"
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.6.0",
+      "purl": "pkg:npm/axios@1.6.0"
+    },
+    {
+      "type": "library",
+      "name": "libxml2",
+      "version": "2.11.4",
+      "purl": "pkg:generic/libxml2@2.11.4"
+    }
+  ],
+  "vulnerabilities": [
+    {
+      "id": "CVE-DEMO-2026-0001",
+      "ratings": [
+        {
+          "severity": "critical",
+          "score": 9.8
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:generic/openssl@3.0.12"
+        }
+      ]
+    },
+    {
+      "id": "CVE-DEMO-2026-0002",
+      "ratings": [
+        {
+          "severity": "high",
+          "score": 8.1
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:npm/axios@1.6.0"
+        }
+      ]
+    },
+    {
+      "id": "CVE-DEMO-2026-0003",
+      "ratings": [
+        {
+          "severity": "medium",
+          "score": 5.4
+        }
+      ],
+      "affects": [
+        {
+          "ref": "pkg:generic/libxml2@2.11.4"
+        }
+      ]
+    }
+  ]
+}
