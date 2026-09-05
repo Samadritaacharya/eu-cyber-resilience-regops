@@ -23,16 +23,29 @@ jobs:
         run: npm run build
       - name: Boot and HTTP smoke
         run: |
-          npm start -- --hostname 127.0.0.1 --port 3000 >/tmp/regops-web.log 2>&1 &
+          (
+            cd frontend
+            npm start -- --hostname 127.0.0.1 --port 3000
+          ) >/tmp/regops-web.log 2>&1 &
           PID=$!
-          trap 'kill $PID' EXIT
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
           node <<'JS'
+          import fs from 'node:fs';
           const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-          for(let i=0;i<60;i++){try{let r=await fetch('http://127.0.0.1:3000/api/health');if(r.ok)break}catch{}await sleep(250)}
+          let ready=false;
+          for(let i=0;i<80;i++){
+            try{const r=await fetch('http://127.0.0.1:3000/api/health');if(r.ok){ready=true;break}}catch{}
+            await sleep(250)
+          }
+          if(!ready){console.error(fs.readFileSync('/tmp/regops-web.log','utf8'));throw Error('server did not start')}
           let r=await fetch('http://127.0.0.1:3000/');let t=await r.text();if(!r.ok||!t.includes('From vulnerability'))throw Error('homepage smoke');
-          r=await fetch('http://127.0.0.1:3000/api/evaluation');let j=await r.json();if(j.cases!==30||j.passed!==30)throw Error('evaluation');
-          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'Gateway',purpose:'Synthetic portfolio incident with enough context.',actively_exploited_vulnerability:true})});j=await r.json();if(j.screening.decision!=='HUMAN_REVIEW_REQUIRED')throw Error('candidate path');
+          r=await fetch('http://127.0.0.1:3000/api/health');let j=await r.json();if(!r.ok||j.paid_api_required!==false||j.policy_version!=='2026.09')throw Error('health contract');
+          r=await fetch('http://127.0.0.1:3000/api/evaluation');j=await r.json();if(j.cases!==30||j.passed!==30||j.accuracy!==1)throw Error('evaluation');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'Gateway',purpose:'Synthetic portfolio incident with enough context.',actively_exploited_vulnerability:true})});j=await r.json();if(!r.ok||j.screening.decision!=='HUMAN_REVIEW_REQUIRED'||j.screening.cra_status!=='reporting-candidate')throw Error('candidate path');
           r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:'{bad'});if(r.status!==400)throw Error('malformed JSON');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:'"hello"'});if(r.status!==422)throw Error('primitive JSON');
+          r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'x',purpose:'A sufficiently long synthetic incident purpose.',actively_exploited_vulnerability:'false'})});if(r.status!==422)throw Error('boolean confusion');
           r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({product_name:'x',purpose:'A sufficiently long synthetic incident purpose.',admin_override:true})});if(r.status!==422)throw Error('unknown field');
+          const huge=JSON.stringify({product_name:'x',purpose:'a'.repeat(70000)});r=await fetch('http://127.0.0.1:3000/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:huge});if(r.status!==413)throw Error('oversized payload');
           console.log('web smoke passed');
           JS
