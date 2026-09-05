@@ -33,6 +33,8 @@ class IncidentInput(BaseModel):
     legal_review_complete: bool = False
     awareness_at: datetime | None = None
     corrective_measure_available_at: datetime | None = None
+    cra_notification_submitted_at: datetime | None = None
+    nis2_notification_submitted_at: datetime | None = None
 
 class Deadline(BaseModel):
     label: str
