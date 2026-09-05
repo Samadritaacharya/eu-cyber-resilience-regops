@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from src.regops.models import IncidentInput
 from src.regops.policy import screen
 
@@ -26,6 +26,21 @@ def test_deadlines_are_24_72():
     due={d.label:d.due_at for d in r.deadlines}
     assert (due['CRA early warning']-t).total_seconds()==24*3600
     assert (due['CRA notification']-t).total_seconds()==72*3600
+
+def test_final_incident_deadlines_use_actual_submission_and_calendar_month():
+    submitted=datetime(2026,8,31,10,tzinfo=timezone.utc)
+    cra=screen(base(severe_security_incident=True,cra_notification_submitted_at=submitted))
+    cra_due={d.label:d.due_at for d in cra.deadlines}
+    assert cra_due['CRA final incident report']==datetime(2026,9,30,10,tzinfo=timezone.utc)
+    nis2=screen(base(cra_scope_candidate=False,nis2_entity_candidate=True,significant_nis2_incident=True,nis2_notification_submitted_at=submitted))
+    nis2_due={d.label:d.due_at for d in nis2.deadlines}
+    assert nis2_due['NIS2 Germany final report']==datetime(2026,9,30,10,tzinfo=timezone.utc)
+
+def test_final_vulnerability_deadline_uses_corrective_measure_timestamp():
+    corrective=datetime(2026,9,7,9,tzinfo=timezone.utc)
+    r=screen(base(actively_exploited_vulnerability=True,corrective_measure_available_at=corrective))
+    due={d.label:d.due_at for d in r.deadlines}
+    assert due['CRA final vulnerability report']==corrective+timedelta(days=14)
 
 def test_no_trigger_but_missing_evidence_is_control_review():
     r=screen(base(owner_assigned=False))
