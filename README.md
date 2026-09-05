@@ -1,5 +1,8 @@
 # RegOps EU — Cyber Resilience Operations Platform
 
+[![Python CI](https://github.com/Samadritaacharya/eu-cyber-resilience-regops/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Samadritaacharya/eu-cyber-resilience-regops/actions/workflows/backend-ci.yml)
+[![Interactive Web CI](https://github.com/Samadritaacharya/eu-cyber-resilience-regops/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/Samadritaacharya/eu-cyber-resilience-regops/actions/workflows/frontend-ci.yml)
+
 > **From vulnerability to regulatory evidence in minutes — with humans in control.**
 
 RegOps EU is a portfolio-safe cyber-resilience operations platform that connects **CycloneDX SBOM evidence, vulnerability/incident triage, CRA + German NIS2 decision support, reporting clocks, evidence readiness, human approval and auditable report drafts**.
@@ -20,6 +23,24 @@ European security teams increasingly need to operationalise cyber-regulatory wor
 Official context is documented in [`docs/market-context.md`](docs/market-context.md).
 
 **Important:** RegOps EU is decision-support software. It does not determine legal scope, perform conformity assessment, or submit regulatory notifications.
+
+## Verification snapshot
+
+| Check | CI-verified result |
+|---|---:|
+| Python unit/governance/API/SBOM/registry tests | **15/15 passed** |
+| Synthetic policy regression set | **30/30 passed** |
+| TypeScript deterministic engine tests | **8/8 passed** |
+| Python ↔ TypeScript policy snapshot parity | **30/30 matched** |
+| TypeScript strict check | **Passed** |
+| Next.js 16.3.4 production build | **Passed** |
+| Production homepage + API HTTP smoke | **Passed** |
+| Malformed / primitive / type-confused / unknown / oversized inputs | **Rejected as expected** |
+| FastAPI production smoke | **Passed** |
+| Docker image build | **Passed** |
+| Required paid API / model key | **0** |
+
+These checks were rerun on `main` after merge. The 30-case result is a **checked-in synthetic regression result**, not a production detection rate or legal-classification-accuracy claim.
 
 ## Product surface
 
@@ -46,7 +67,7 @@ CycloneDX SBOM / vulnerability / incident
 
 ## Interactive command center
 
-`frontend/` is a **Next.js 16 + React 19** command center designed as a live portfolio product rather than a static dashboard.
+`frontend/` is a **Next.js 16.3.4 + React 19** command center designed as a live portfolio product rather than a static dashboard.
 
 It includes:
 
@@ -70,6 +91,8 @@ Run locally:
 
 ```bash
 npm install
+npm run typecheck
+npm test
 npm run build
 npm start
 ```
@@ -105,21 +128,6 @@ The local backend adds:
 - append-only audit events
 - deterministic report drafting
 - optional local/OpenAI-compatible advisory summarisation
-
-## Verification
-
-Current local verification before first GitHub publication:
-
-| Check | Result |
-|---|---:|
-| Python unit/governance/API/SBOM/registry tests | **15/15 passed** |
-| Synthetic policy regression set | **30/30 passed** |
-| Python ↔ TypeScript policy snapshot parity | **30/30 matched** |
-| Core TypeScript static check | **Passed** |
-| FastAPI production smoke | **Passed** |
-| Next.js production build | **Configured for GitHub CI; clean-network CI verification required** |
-
-The 30-case result is a **checked-in synthetic regression result**, not a production detection-rate or legal-classification claim.
 
 ## Regulatory decision model
 
